@@ -1,0 +1,6 @@
+import pandas as pd
+
+path = r"C:\Users\HP\Downloads\35985678-0d79-46b4-9ed6-6f13308a1d24_201016dc9f0197de809ef278006ca85a.csv"
+df = pd.read_csv(path)
+
+print(df.head())  # shows first 5 rows
