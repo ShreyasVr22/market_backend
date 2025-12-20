@@ -1,4 +1,39 @@
 __pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv
+.venv*/
+.venv_tf214/
+
+# IDE/Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+
+# Trained models and large artifacts
+trained_models/
+trained_models_backup*/
+trained_models_compatible/
+trained_models_*.json
+trained_models_keras_*.json
+trained_models_verify_*.json
+
+# Data files
+data/
+*.csv
+
+# Misc
+.DS_Store
+node_modules/
+build/
+__pycache__/
 *.pyc
 .env
 .venv/

@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
-from routes.market import router as market_router
+from routes.market import router as market_router, startup_load
 
 load_dotenv()
 
@@ -24,6 +24,9 @@ app.add_middleware(
 
 # Include routes
 app.include_router(market_router, prefix="/api/market", tags=["market"])
+
+# Register startup handler to load CSV and other heavy init
+app.add_event_handler("startup", startup_load)
 
 @app.get("/")
 def read_root():

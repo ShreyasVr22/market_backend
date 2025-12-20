@@ -1,0 +1,13 @@
+{
+  "trained": [],
+  "skipped": [
+    {
+      "district": "Bangalore",
+      "market": "Doddaballa Pur",
+      "crop": "Pudi",
+      "reason": "insufficient_numeric_samples",
+      "count": 3
+    }
+  ],
+  "failed": []
+}

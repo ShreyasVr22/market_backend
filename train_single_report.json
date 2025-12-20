@@ -1,0 +1,12 @@
+{
+  "trained": [],
+  "skipped": [
+    {
+      "district": "Bangalore",
+      "market": "Bangalore",
+      "crop": "Pudi",
+      "reason": "no_data"
+    }
+  ],
+  "failed": []
+}
