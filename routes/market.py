@@ -31,6 +31,8 @@ ceda = CEDAClient()
 # passed into DataLoader. Do NOT fall back to hardcoded Downloads/Kaggle paths.
 CSV_PATH = os.getenv("CSV_PATH", None)
 loader = DataLoader(CSV_PATH)
+# Optional path where trained models are stored (absolute or repo-relative)
+MODEL_PATH = os.getenv("MODEL_PATH", None)
 
 # Defer heavy CSV loading to application startup to avoid blocking/ crashing
 def startup_load():
@@ -98,13 +100,24 @@ def load_trained_model(district, market, crop):
     key = f"{district}_{market.replace(' ', '_')}_{crop}"
     if key not in MODEL_CACHE:
         # Try multiple filename patterns and formats (.h5, .pkl)
-        candidates = [
-            f"trained_models/{district}_{market.replace(' ', '_')}_{crop}.h5",
-            f"trained_models/{crop}_{market.replace(' ', '_')}.h5",
-            f"trained_models/{crop}_{market.replace(' ', '_')}.pkl",
-            f"trained_models/{district}_{market.replace(' ', '_')}_{crop}.pkl",
-            f"trained_models/{crop}_{market}.pkl",
+        # base candidate filenames (relative to model directories)
+        base_candidates = [
+            f"{district}_{market.replace(' ', '_')}_{crop}.h5",
+            f"{crop}_{market.replace(' ', '_')}.h5",
+            f"{crop}_{market.replace(' ', '_')}.pkl",
+            f"{district}_{market.replace(' ', '_')}_{crop}.pkl",
+            f"{crop}_{market}.pkl",
         ]
+
+        candidates = []
+        # If MODEL_PATH provided, prefer that directory first
+        if MODEL_PATH:
+            for b in base_candidates:
+                candidates.append(os.path.join(MODEL_PATH, b))
+
+        # then check the repo-local trained_models/ folder
+        for b in base_candidates:
+            candidates.append(os.path.join('trained_models', b))
 
         loaded = False
         for model_path in candidates:
@@ -148,16 +161,27 @@ def load_trained_model(district, market, crop):
 def has_trained_model_file(district, market, crop):
     """Fast check if a trained model file exists for the combo (no loading)."""
     # try same candidate patterns as `load_trained_model` but only check file existence
-    candidates = [
-        f"trained_models/{district}_{market.replace(' ', '_')}_{crop}.h5",
-        f"trained_models/{crop}_{market.replace(' ', '_')}.h5",
-        f"trained_models/{crop}_{market.replace(' ', '_')}.pkl",
-        f"trained_models/{district}_{market.replace(' ', '_')}_{crop}.pkl",
-        f"trained_models/{crop}_{market}.pkl",
+    base_candidates = [
+        f"{district}_{market.replace(' ', '_')}_{crop}.h5",
+        f"{crop}_{market.replace(' ', '_')}.h5",
+        f"{crop}_{market.replace(' ', '_')}.pkl",
+        f"{district}_{market.replace(' ', '_')}_{crop}.pkl",
+        f"{crop}_{market}.pkl",
     ]
-    for model_path in candidates:
+
+    # check MODEL_PATH first if set
+    if MODEL_PATH:
+        for b in base_candidates:
+            model_path = os.path.join(MODEL_PATH, b)
+            if os.path.exists(model_path):
+                return True
+
+    # then check repo-local trained_models/
+    for b in base_candidates:
+        model_path = os.path.join('trained_models', b)
         if os.path.exists(model_path):
             return True
+    return False
     return False
 
 def get_lstm_prediction(model, loader, market, crop):
