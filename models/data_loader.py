@@ -156,9 +156,11 @@ class DataLoader:
         df.rename(columns=cols, inplace=True)
 
         colmap = {}
-        # Market name variants
-        if 'Market' in df.columns and 'Market Name' not in df.columns:
-            colmap['Market'] = 'Market Name'
+        # Map any market-like column to 'Market Name' (case-insensitive)
+        if 'Market Name' not in df.columns:
+            market_like = next((c for c in df.columns if 'market' in c.lower()), None)
+            if market_like and market_like != 'Market Name':
+                colmap[market_like] = 'Market Name'
 
         # Date variants
         for dname in ['Arrival_Date', 'Arrival Date', 'Reported Date', 'ArrivalDate', 'Arrival_Date ']:

@@ -56,10 +56,23 @@ def startup_load():
                 district_col = c
                 break
 
-        # If we don't have an explicit district column, try to infer districts from 'Market Name'
+        # If we don't have an explicit district column, try to infer districts from any market-like column
         if district_col is None:
-            # map every market to a pseudo-district equal to first token of market name
-            df['__inferred_district'] = df['Market Name'].astype(str).apply(lambda s: s.split('_')[0].split('-')[0].split()[:1][0] if s else 'Unknown')
+            # try to find a market-like column (case-insensitive)
+            market_like = next((c for c in df.columns if 'market' in c.lower()), None)
+            if market_like:
+                df['__inferred_district'] = df[market_like].astype(str).apply(lambda s: s.split('_')[0].split('-')[0].split()[:1][0] if s else 'Unknown')
+            else:
+                # fallback: use first string column available
+                first_str_col = None
+                for c in df.columns:
+                    if df[c].dtype == object:
+                        first_str_col = c
+                        break
+                if first_str_col:
+                    df['__inferred_district'] = df[first_str_col].astype(str).apply(lambda s: s.split('_')[0].split('-')[0].split()[:1][0] if s else 'Unknown')
+                else:
+                    df['__inferred_district'] = 'Unknown'
             district_col = '__inferred_district'
 
         # Determine crop columns (collect from Variety/Commodity/Group)
