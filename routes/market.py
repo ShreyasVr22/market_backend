@@ -20,6 +20,7 @@ from utils.db_utils import Database
 from models.trainer import train_and_save_all
 import pandas as pd
 import math
+from utils.model_sync import sync_models_from_s3
 
 router = APIRouter()
 
@@ -40,6 +41,22 @@ def startup_load():
         loader.load_csv()
     except Exception as e:
         print(f"✗ Startup CSV load failed: {e}")
+
+    # If S3/MinIO vars are present, attempt to download models into MODEL_PATH
+    try:
+        s3_bucket = os.getenv('S3_BUCKET')
+        if s3_bucket:
+            target = MODEL_PATH or 'trained_models'
+            os.makedirs(target, exist_ok=True)
+            prefix = os.getenv('S3_PREFIX', 'trained_models/')
+            endpoint = os.getenv('S3_ENDPOINT')
+            try:
+                count = sync_models_from_s3(bucket=s3_bucket, prefix=prefix, target_dir=target, endpoint_url=endpoint, max_files=2000)
+                print(f"✓ Synced {count} model files from S3/MinIO to {target}")
+            except Exception as se:
+                print(f"✗ Model sync from S3 failed: {se}")
+    except Exception:
+        pass
 
     # Build districts -> markets -> crops mapping from loaded CSV
     try:
@@ -709,6 +726,51 @@ def health():
         "models_loaded": len(MODEL_CACHE),
         "database": os.path.exists("market_prices.db")
     }
+
+
+@router.get("/models/list")
+def list_models(limit: int = 100, include_paths: bool = False):
+    """List available model files on the instance.
+
+    - Checks `MODEL_PATH` (if set) first, then `trained_models/` in the repo.
+    - Returns up to `limit` files per directory. Set `include_paths=True`
+      to include full file paths and sizes (useful for debugging).
+    """
+    dirs_to_check = []
+    if MODEL_PATH:
+        dirs_to_check.append(MODEL_PATH)
+    dirs_to_check.append('trained_models')
+
+    result = []
+    for d in dirs_to_check:
+        try:
+            if not os.path.exists(d):
+                result.append({"directory": d, "exists": False, "count": 0, "files": []})
+                continue
+
+            files = []
+            # Walk but avoid deep scans; stop once `limit` reached
+            for root, _, filenames in os.walk(d):
+                for fname in filenames:
+                    try:
+                        fpath = os.path.join(root, fname)
+                        fsize = os.path.getsize(fpath)
+                        if include_paths:
+                            files.append({"name": fname, "path": fpath, "size": fsize})
+                        else:
+                            files.append({"name": fname})
+                    except Exception:
+                        continue
+                    if len(files) >= limit:
+                        break
+                if len(files) >= limit:
+                    break
+
+            result.append({"directory": d, "exists": True, "count": len(files), "files": files})
+        except Exception as e:
+            result.append({"directory": d, "error": str(e)})
+
+    return {"models": result}
 
 
 @router.post("/train")
